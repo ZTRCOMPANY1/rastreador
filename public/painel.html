@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painel de Visitas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      color: #333;
+    }
+    #filtros {
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .contador {
+      margin: 10px 0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Painel de Visitas</h1>
+
+  <div id="filtros">
+    <label for="siteFiltro">Filtrar por site:</label>
+    <select id="siteFiltro">
+      <option value="">Todos</option>
+    </select>
+  </div>
+
+  <div class="contador" id="contador">Total de visitas: 0</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Site</th>
+        <th>Página</th>
+        <th>IP</th>
+        <th>Navegador</th>
+        <th>Idioma</th>
+        <th>Resolução</th>
+        <th>Referer</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaVisitas"></tbody>
+  </table>
+
+  <script>
+    async function carregarVisitas() {
+      const resp = await fetch("/visitas");
+      const visitas = await resp.json();
+
+      const tabela = document.getElementById("tabelaVisitas");
+      const filtro = document.getElementById("siteFiltro");
+      const contador = document.getElementById("contador");
+
+      const sitesUnicos = new Set();
+
+      // Limpa
+      tabela.innerHTML = "";
+
+      visitas.reverse(); // Mostrar últimas visitas no topo
+
+      visitas.forEach(visita => {
+        sitesUnicos.add(visita.site || "desconhecido");
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${new Date(visita.dataHora).toLocaleString()}</td>
+          <td>${visita.site}</td>
+          <td>${visita.pagina}</td>
+          <td>${visita.ip}</td>
+          <td>${visita.navegador}</td>
+          <td>${visita.idioma}</td>
+          <td>${visita.resolucao}</td>
+          <td>${visita.referer}</td>
+        `;
+        tr.dataset.site = visita.site;
+        tabela.appendChild(tr);
+      });
+
+      contador.innerText = `Total de visitas: ${visitas.length}`;
+
+      // Preenche o filtro
+      filtro.innerHTML = `<option value="">Todos</option>`;
+      Array.from(sitesUnicos).sort().forEach(site => {
+        const option = document.createElement("option");
+        option.value = site;
+        option.innerText = site;
+        filtro.appendChild(option);
+      });
+
+      filtro.addEventListener("change", () => {
+        const siteSelecionado = filtro.value;
+        document.querySelectorAll("#tabelaVisitas tr").forEach(tr => {
+          tr.style.display = (!siteSelecionado || tr.dataset.site === siteSelecionado) ? "" : "none";
+        });
+      });
+    }
+
+    carregarVisitas();
+  </script>
+</body>
+</html>
