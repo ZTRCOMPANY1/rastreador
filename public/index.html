@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Site com Rastreamento</title>
+</head>
+<body>
+  <h1>Bem-vindo ao meu site</h1>
+
+  <script>
+    fetch("/rastrear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pagina: window.location.pathname,
+        navegador: navigator.userAgent,
+        idioma: navigator.language,
+        resolucao: `${screen.width}x${screen.height}`,
+        referer: document.referrer || "acesso direto"
+      })
+    });
+  </script>
+</body>
+</html>
