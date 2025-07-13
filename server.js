@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const fetch = require("node-fetch"); // IMPORTANTE
+const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,10 +13,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// Garante que o arquivo existe
+// Garante que o visitas.json existe
 if (!fs.existsSync(arquivo)) fs.writeFileSync(arquivo, "[]", "utf8");
 
-// Rota principal
+// Rota de rastreamento
 app.post("/rastrear", async (req, res) => {
   let visitas = [];
 
@@ -24,13 +24,14 @@ app.post("/rastrear", async (req, res) => {
     const conteudo = fs.readFileSync(arquivo, "utf8");
     visitas = conteudo ? JSON.parse(conteudo) : [];
   } catch (erro) {
-    console.error("Erro lendo JSON:", erro);
+    console.error("Erro lendo visitas.json:", erro);
     visitas = [];
   }
 
-  const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  // Captura do IP real (com fallback)
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
 
-  // Busca geolocalização por IP (API gratuita)
+  // Busca localização do IP
   let localizacao = {
     pais: "desconhecido",
     estado: "desconhecido",
@@ -38,17 +39,23 @@ app.post("/rastrear", async (req, res) => {
   };
 
   try {
-    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city`);
+    const resp = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
     const json = await resp.json();
-    localizacao = {
-      pais: json.country || "desconhecido",
-      estado: json.regionName || "desconhecido",
-      cidade: json.city || "desconhecida"
-    };
+
+    if (json.status === "success") {
+      localizacao = {
+        pais: json.country || "desconhecido",
+        estado: json.regionName || "desconhecido",
+        cidade: json.city || "desconhecida"
+      };
+    } else {
+      console.warn("Falha ao localizar IP:", json);
+    }
   } catch (erro) {
     console.error("Erro ao buscar localização:", erro);
   }
 
+  // Monta a visita
   const novaVisita = {
     dataHora: new Date().toISOString(),
     ip,
@@ -71,12 +78,12 @@ app.post("/rastrear", async (req, res) => {
     fs.writeFileSync(arquivo, JSON.stringify(visitas, null, 2), "utf8");
     res.status(200).json({ sucesso: true });
   } catch (erro) {
-    console.error("Erro salvando visita:", erro);
+    console.error("Erro ao salvar visita:", erro);
     res.status(500).json({ erro: "Erro ao salvar visita" });
   }
 });
 
-// Endpoint para exibir visitas
+// Rota para exibir visitas
 app.get("/visitas", (req, res) => {
   try {
     const conteudo = fs.readFileSync(arquivo, "utf8");
@@ -87,6 +94,7 @@ app.get("/visitas", (req, res) => {
   }
 });
 
+// Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
 });
