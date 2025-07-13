@@ -5,40 +5,60 @@ const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const arquivo = path.join(__dirname, "visitas.json");
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const arquivo = path.join(__dirname, "visitas.json");
-
-// Garante que o arquivo existe
+// Garante que o arquivo existe e é um JSON válido
 if (!fs.existsSync(arquivo)) {
   fs.writeFileSync(arquivo, "[]", "utf8");
 }
 
-// Endpoint para receber os dados
+// Rota para salvar visita
 app.post("/rastrear", (req, res) => {
+  let visitas = [];
+
+  try {
+    const conteudo = fs.readFileSync(arquivo, "utf8");
+    visitas = conteudo ? JSON.parse(conteudo) : [];
+  } catch (erro) {
+    console.error("Erro ao ler o arquivo visitas.json:", erro);
+    visitas = [];
+  }
+
   const novaVisita = {
     dataHora: new Date().toISOString(),
     ip: req.headers["x-forwarded-for"] || req.connection.remoteAddress,
-    ...req.body
+    pagina: req.body.pagina || "desconhecida",
+    navegador: req.body.navegador || "desconhecido",
+    idioma: req.body.idioma || "desconhecido",
+    resolucao: req.body.resolucao || "desconhecida",
+    referer: req.body.referer || "direto"
   };
 
-  // Lê o arquivo existente
-  const dados = JSON.parse(fs.readFileSync(arquivo, "utf8"));
-  dados.push(novaVisita);
+  visitas.push(novaVisita);
 
-  // Salva de volta
-  fs.writeFileSync(arquivo, JSON.stringify(dados, null, 2));
-
-  res.status(200).json({ sucesso: true });
+  try {
+    fs.writeFileSync(arquivo, JSON.stringify(visitas, null, 2));
+    res.status(200).json({ sucesso: true });
+  } catch (erro) {
+    console.error("Erro ao salvar visitas:", erro);
+    res.status(500).json({ erro: "Erro ao salvar visita" });
+  }
 });
 
-// Endpoint para ver as visitas
+// Rota para visualizar as visitas (opcional)
 app.get("/visitas", (req, res) => {
-  const dados = JSON.parse(fs.readFileSync(arquivo, "utf8"));
-  res.json(dados);
+  try {
+    const conteudo = fs.readFileSync(arquivo, "utf8");
+    const visitas = conteudo ? JSON.parse(conteudo) : [];
+    res.json(visitas);
+  } catch (erro) {
+    res.status(500).json({ erro: "Erro ao ler visitas" });
+  }
 });
 
 app.listen(PORT, () => {
