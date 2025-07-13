@@ -66,6 +66,7 @@
 
   <div class="botoes">
     <button onclick="exportarCSV()">Exportar CSV</button>
+    <button id="btnLimpar">Limpar visitas</button>
   </div>
 
   <div class="contador" id="contador">Total de visitas: 0</div>
@@ -92,6 +93,18 @@
   </table>
 
   <script>
+    document.getElementById("btnLimpar").addEventListener("click", async () => {
+  if (!confirm("Tem certeza que deseja apagar todas as visitas? Esta ação não pode ser desfeita.")) return;
+
+  const resposta = await fetch("/limpar-visitas", { method: "DELETE" });
+  if (resposta.ok) {
+    alert("Visitas apagadas com sucesso!");
+    carregarVisitas(); // Recarrega a tabela para ficar vazia
+  } else {
+    alert("Erro ao apagar visitas.");
+  }
+});
+
     let visitasGlobal = [];
 
     async function carregarVisitas() {

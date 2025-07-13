@@ -95,6 +95,18 @@ app.get("/visitas", (req, res) => {
   }
 });
 
+// Rota para limpar visitas.json (apagar todas as visitas)
+app.delete("/limpar-visitas", (req, res) => {
+  try {
+    fs.writeFileSync(arquivo, "[]", "utf8");
+    res.status(200).json({ sucesso: true, mensagem: "Visitas apagadas com sucesso." });
+  } catch (erro) {
+    console.error("Erro ao limpar visitas:", erro);
+    res.status(500).json({ erro: "Erro ao limpar visitas" });
+  }
+});
+
+
 // Inicia o servidor
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
