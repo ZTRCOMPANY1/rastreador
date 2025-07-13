@@ -37,6 +37,21 @@
       margin: 10px 0;
       font-weight: bold;
     }
+    .botoes {
+      margin: 20px 0;
+    }
+    button {
+      padding: 10px 16px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
@@ -49,6 +64,10 @@
     </select>
   </div>
 
+  <div class="botoes">
+    <button onclick="exportarCSV()">Exportar CSV</button>
+  </div>
+
   <div class="contador" id="contador">Total de visitas: 0</div>
 
   <table>
@@ -59,18 +78,26 @@
         <th>Página</th>
         <th>IP</th>
         <th>Navegador</th>
+        <th>Sistema</th>
+        <th>Dispositivo</th>
         <th>Idioma</th>
         <th>Resolução</th>
         <th>Referer</th>
+        <th>País</th>
+        <th>Estado</th>
+        <th>Cidade</th>
       </tr>
     </thead>
     <tbody id="tabelaVisitas"></tbody>
   </table>
 
   <script>
+    let visitasGlobal = [];
+
     async function carregarVisitas() {
       const resp = await fetch("/visitas");
       const visitas = await resp.json();
+      visitasGlobal = visitas.reverse();
 
       const tabela = document.getElementById("tabelaVisitas");
       const filtro = document.getElementById("siteFiltro");
@@ -78,12 +105,9 @@
 
       const sitesUnicos = new Set();
 
-      // Limpa
       tabela.innerHTML = "";
 
-      visitas.reverse(); // Mostrar últimas visitas no topo
-
-      visitas.forEach(visita => {
+      visitasGlobal.forEach(visita => {
         sitesUnicos.add(visita.site || "desconhecido");
 
         const tr = document.createElement("tr");
@@ -93,17 +117,22 @@
           <td>${visita.pagina}</td>
           <td>${visita.ip}</td>
           <td>${visita.navegador}</td>
+          <td>${visita.sistema}</td>
+          <td>${visita.dispositivo}</td>
           <td>${visita.idioma}</td>
           <td>${visita.resolucao}</td>
           <td>${visita.referer}</td>
+          <td>${visita.pais}</td>
+          <td>${visita.estado}</td>
+          <td>${visita.cidade}</td>
         `;
         tr.dataset.site = visita.site;
         tabela.appendChild(tr);
       });
 
-      contador.innerText = `Total de visitas: ${visitas.length}`;
+      contador.innerText = `Total de visitas: ${visitasGlobal.length}`;
 
-      // Preenche o filtro
+      // Preenche o filtro de sites
       filtro.innerHTML = `<option value="">Todos</option>`;
       Array.from(sitesUnicos).sort().forEach(site => {
         const option = document.createElement("option");
@@ -118,6 +147,41 @@
           tr.style.display = (!siteSelecionado || tr.dataset.site === siteSelecionado) ? "" : "none";
         });
       });
+    }
+
+    function exportarCSV() {
+      if (visitasGlobal.length === 0) return alert("Nenhuma visita para exportar.");
+
+      const cabecalho = [
+        "Data", "Site", "Página", "IP", "Navegador", "Sistema", "Dispositivo",
+        "Idioma", "Resolução", "Referer", "País", "Estado", "Cidade"
+      ];
+
+      const linhas = visitasGlobal.map(v => [
+        new Date(v.dataHora).toLocaleString(),
+        v.site,
+        v.pagina,
+        v.ip,
+        v.navegador,
+        v.sistema,
+        v.dispositivo,
+        v.idioma,
+        v.resolucao,
+        v.referer,
+        v.pais,
+        v.estado,
+        v.cidade
+      ]);
+
+      const csv = [cabecalho, ...linhas]
+        .map(linha => linha.map(item => `"${(item || "").toString().replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "visitas.csv";
+      link.click();
     }
 
     carregarVisitas();
