@@ -28,8 +28,9 @@ app.post("/rastrear", async (req, res) => {
     visitas = [];
   }
 
-  // Captura do IP real (com fallback)
+  // Captura do IP real com fallback
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
+  console.log("📡 IP capturado:", ip);
 
   // Busca localização do IP
   let localizacao = {
@@ -39,7 +40,7 @@ app.post("/rastrear", async (req, res) => {
   };
 
   try {
-    const resp = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
+    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
     const json = await resp.json();
 
     if (json.status === "success") {
