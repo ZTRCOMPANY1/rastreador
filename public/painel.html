@@ -66,6 +66,7 @@
 
   <div class="botoes">
     <button onclick="exportarCSV()">Exportar CSV</button>
+    <button onclick="exportarPDF()">Exportar PDF</button>
     <button id="btnLimpar">Limpar visitas</button>
   </div>
 
@@ -164,6 +165,20 @@
       });
     }
 
+
+  function exportarPDF() {
+    const elemento = document.getElementById("tabela-visitas");
+    const opt = {
+      margin:       0.3,
+      filename:     `relatorio_visitas_${new Date().toISOString().slice(0,10)}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+    };
+    html2pdf().set(opt).from(elemento).save();
+  }
+
+
     function exportarCSV() {
       if (visitasGlobal.length === 0) return alert("Nenhuma visita para exportar.");
 
@@ -201,5 +216,7 @@
 
     carregarVisitas();
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 </body>
 </html>
