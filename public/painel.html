@@ -18,7 +18,12 @@
       margin-bottom: 15px;
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
       justify-content: center;
+    }
+    select {
+      padding: 5px 10px;
+      font-size: 14px;
     }
     table {
       width: 100%;
@@ -49,6 +54,9 @@
   <h1>Painel de Visitas</h1>
 
   <div class="botoes">
+    <select id="filtro-site">
+      <option value="todos">🔍 Todos os sites</option>
+    </select>
     <button onclick="exportarCSV()">Exportar CSV</button>
     <button onclick="exportarPDF()">Exportar PDF</button>
     <button id="btnLimpar">Limpar visitas</button>
@@ -79,9 +87,30 @@
   </div>
 
   <script>
+    let todasAsVisitas = [];
+
     async function carregarVisitas() {
       const resp = await fetch("/visitas");
-      const visitas = await resp.json();
+      todasAsVisitas = await resp.json();
+      preencherSelectSites(todasAsVisitas);
+      renderizarTabela(todasAsVisitas);
+    }
+
+    function preencherSelectSites(visitas) {
+      const select = document.getElementById("filtro-site");
+      const sites = Array.from(new Set(visitas.map(v => v.site))).filter(Boolean);
+
+      // Limpa opções antigas (menos "Todos")
+      select.innerHTML = '<option value="todos">🔍 Todos os sites</option>';
+      sites.forEach(site => {
+        const opt = document.createElement("option");
+        opt.value = site;
+        opt.textContent = site;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderizarTabela(visitas) {
       const corpo = document.getElementById("corpo-tabela");
       corpo.innerHTML = "";
 
@@ -106,6 +135,16 @@
         corpo.appendChild(tr);
       });
     }
+
+    document.getElementById("filtro-site").addEventListener("change", () => {
+      const filtro = document.getElementById("filtro-site").value;
+      if (filtro === "todos") {
+        renderizarTabela(todasAsVisitas);
+      } else {
+        const filtradas = todasAsVisitas.filter(v => v.site === filtro);
+        renderizarTabela(filtradas);
+      }
+    });
 
     function exportarCSV() {
       const linhas = [];
