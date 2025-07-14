@@ -75,6 +75,7 @@
     <thead>
       <tr>
         <th>Data</th>
+        <th>Usuário</th>
         <th>Site</th>
         <th>Página</th>
         <th>IP</th>
@@ -126,6 +127,7 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${new Date(visita.dataHora).toLocaleString()}</td>
+          <td>Usuário ${visita.usuarioId || "?"}</td>
           <td>${visita.site}</td>
           <td>${visita.pagina}</td>
           <td>${visita.ip}</td>
