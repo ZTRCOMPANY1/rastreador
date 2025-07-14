@@ -1,68 +1,52 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Painel de Visitas</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      padding: 20px;
       background: #f4f4f4;
     }
     h1 {
+      text-align: center;
       color: #333;
     }
-    #filtros {
-      margin-bottom: 20px;
+    .botoes {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #fff;
+      background: white;
     }
     th, td {
       padding: 8px;
       border: 1px solid #ccc;
       text-align: left;
+      font-size: 14px;
     }
     th {
       background: #007bff;
       color: white;
     }
     tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    .contador {
-      margin: 10px 0;
-      font-weight: bold;
-    }
-    .botoes {
-      margin: 20px 0;
+      background-color: #f2f2f2;
     }
     button {
-      padding: 10px 16px;
-      background: #007bff;
-      border: none;
-      color: white;
-      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
       cursor: pointer;
-      margin-right: 10px;
-    }
-    button:hover {
-      background: #0056b3;
     }
   </style>
 </head>
 <body>
   <h1>Painel de Visitas</h1>
-
-  <div id="filtros">
-    <label for="siteFiltro">Filtrar por site:</label>
-    <select id="siteFiltro">
-      <option value="">Todos</option>
-    </select>
-  </div>
 
   <div class="botoes">
     <button onclick="exportarCSV()">Exportar CSV</button>
@@ -70,65 +54,42 @@
     <button id="btnLimpar">Limpar visitas</button>
   </div>
 
-  <div class="contador" id="contador">Total de visitas: 0</div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Usuário</th>
-        <th>Site</th>
-        <th>Página</th>
-        <th>IP</th>
-        <th>Navegador</th>
-        <th>Sistema</th>
-        <th>Dispositivo</th>
-        <th>Idioma</th>
-        <th>Resolução</th>
-        <th>Referer</th>
-        <th>País</th>
-        <th>Estado</th>
-        <th>Cidade</th>
-      </tr>
-    </thead>
-    <tbody id="tabelaVisitas"></tbody>
-  </table>
+  <div id="tabela-container">
+    <table id="tabela-visitas">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Data</th>
+          <th>Site</th>
+          <th>Página</th>
+          <th>IP</th>
+          <th>Navegador</th>
+          <th>Sistema</th>
+          <th>Dispositivo</th>
+          <th>Idioma</th>
+          <th>Resolução</th>
+          <th>Referer</th>
+          <th>País</th>
+          <th>Estado</th>
+          <th>Cidade</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-tabela"></tbody>
+    </table>
+  </div>
 
   <script>
-    document.getElementById("btnLimpar").addEventListener("click", async () => {
-  if (!confirm("Tem certeza que deseja apagar todas as visitas? Esta ação não pode ser desfeita.")) return;
-
-  const resposta = await fetch("/limpar-visitas", { method: "DELETE" });
-  if (resposta.ok) {
-    alert("Visitas apagadas com sucesso!");
-    carregarVisitas(); // Recarrega a tabela para ficar vazia
-  } else {
-    alert("Erro ao apagar visitas.");
-  }
-});
-
-    let visitasGlobal = [];
-
     async function carregarVisitas() {
       const resp = await fetch("/visitas");
       const visitas = await resp.json();
-      visitasGlobal = visitas.reverse();
+      const corpo = document.getElementById("corpo-tabela");
+      corpo.innerHTML = "";
 
-      const tabela = document.getElementById("tabelaVisitas");
-      const filtro = document.getElementById("siteFiltro");
-      const contador = document.getElementById("contador");
-
-      const sitesUnicos = new Set();
-
-      tabela.innerHTML = "";
-
-      visitasGlobal.forEach(visita => {
-        sitesUnicos.add(visita.site || "desconhecido");
-
+      visitas.forEach((visita) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${new Date(visita.dataHora).toLocaleString()}</td>
           <td>Usuário ${visita.usuarioId || "?"}</td>
+          <td>${new Date(visita.dataHora).toLocaleString()}</td>
           <td>${visita.site}</td>
           <td>${visita.pagina}</td>
           <td>${visita.ip}</td>
@@ -142,83 +103,53 @@
           <td>${visita.estado}</td>
           <td>${visita.cidade}</td>
         `;
-        tr.dataset.site = visita.site;
-        tabela.appendChild(tr);
-      });
-
-      contador.innerText = `Total de visitas: ${visitasGlobal.length}`;
-
-      // Preenche o filtro de sites
-      filtro.innerHTML = `<option value="">Todos</option>`;
-      Array.from(sitesUnicos).sort().forEach(site => {
-        const option = document.createElement("option");
-        option.value = site;
-        option.innerText = site;
-        filtro.appendChild(option);
-      });
-
-      filtro.addEventListener("change", () => {
-        const siteSelecionado = filtro.value;
-        document.querySelectorAll("#tabelaVisitas tr").forEach(tr => {
-          tr.style.display = (!siteSelecionado || tr.dataset.site === siteSelecionado) ? "" : "none";
-        });
+        corpo.appendChild(tr);
       });
     }
 
-
     function exportarCSV() {
-      if (visitasGlobal.length === 0) return alert("Nenhuma visita para exportar.");
+      const linhas = [];
+      const cabeçalhos = Array.from(document.querySelectorAll("thead th")).map(th => th.innerText);
+      linhas.push(cabeçalhos.join(","));
 
-      const cabecalho = [
-        "Data", "Site", "Página", "IP", "Navegador", "Sistema", "Dispositivo",
-        "Idioma", "Resolução", "Referer", "País", "Estado", "Cidade"
-      ];
+      document.querySelectorAll("tbody tr").forEach(tr => {
+        const dados = Array.from(tr.querySelectorAll("td")).map(td => `"${td.innerText}"`);
+        linhas.push(dados.join(","));
+      });
 
-      const linhas = visitasGlobal.map(v => [
-        new Date(v.dataHora).toLocaleString(),
-        v.site,
-        v.pagina,
-        v.ip,
-        v.navegador,
-        v.sistema,
-        v.dispositivo,
-        v.idioma,
-        v.resolucao,
-        v.referer,
-        v.pais,
-        v.estado,
-        v.cidade
-      ]);
-
-      const csv = [cabecalho, ...linhas]
-        .map(linha => linha.map(item => `"${(item || "").toString().replace(/"/g, '""')}"`).join(","))
-        .join("\n");
-
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([linhas.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "visitas.csv";
+      link.href = url;
+      link.download = `visitas_${new Date().toISOString().slice(0,10)}.csv`;
       link.click();
     }
 
+    function exportarPDF() {
+      const elemento = document.getElementById("tabela-container");
+      const opt = {
+        margin: 0.3,
+        filename: `visitas_${new Date().toISOString().slice(0,10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(elemento).save();
+    }
+
+    document.getElementById("btnLimpar").addEventListener("click", async () => {
+      if (confirm("Tem certeza que deseja apagar todas as visitas?")) {
+        const resposta = await fetch("/limpar-visitas", { method: "DELETE" });
+        if (resposta.ok) {
+          alert("Visitas apagadas com sucesso.");
+          carregarVisitas();
+        } else {
+          alert("Erro ao apagar visitas.");
+        }
+      }
+    });
+
     carregarVisitas();
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-
-  <script>
-  function exportarPDF() {
-    const elemento = document.getElementById("tabela-visitas");
-    const opt = {
-      margin:       0.3,
-      filename:     `relatorio_visitas_${new Date().toISOString().slice(0,10)}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
-    };
-    html2pdf().set(opt).from(elemento).save();
-  }
-</script>
-
 </body>
 </html>
